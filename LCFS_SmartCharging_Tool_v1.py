@@ -185,8 +185,9 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
     )
     df_lcfs_pf_reporting.to_csv(os.path.join(output_dir, "powerflex_transformed_data.csv"), index=True)
     # add total kwh for powerflex
-    df_lcfs_pf_reporting['Total kWh'] = df_lcfs_pf_reporting.sum(axis=1)
-    print(f"Powerflex total kWh filed: {df_lcfs_pf_reporting['Total kWh'].sum():,.2f}")
+    df_pfvalidation = df_lcfs_pf_reporting.copy()
+    df_pfvalidation['Total kWh'] = df_lcfs_pf_reporting.sum(axis=1)
+    print(f"Powerflex total kWh filed: {df_pfvalidation['Total kWh'].sum():,.2f}")
     # Transform Chargepoint data
     df_lcfs_chargepoint["System S/N"] = pd.merge(df_lcfs_chargepoint, df_evseid_sn, left_on="EVSE ID", right_on="EVSE ID", how="left")["System S/N"]
     df_lcfs_chargepoint['FSE ID'] = pd.merge(df_lcfs_chargepoint, df_registered_fse, left_on="System S/N", right_on="EVSE_Serial_No", how="left")["FSE_ID"]
