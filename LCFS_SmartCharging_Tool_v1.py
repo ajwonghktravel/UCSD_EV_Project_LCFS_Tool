@@ -290,7 +290,13 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
 
     print(f"Total credits (smart charging): {df_allsmart.sum().sum():,.2f}")
     print(f"Total credits (grid average): {df_allgridavg.sum().sum():,.2f}")
-    print(f"Total credits (optimized): {df_optimized_credits.sum().sum():,.2f}")
+    print(f"Total credits (optimized): {df_optimized_credits.sum().sum():,.2f}")# Create a boolean mask where the column names match 'smart'
+    is_smart_column = (df_method_used.loc['method_used'] == 'smart')
+    # Filter columns using .loc and sum them up
+    smart_credits_total = df_optimized_credits.loc[:, is_smart_column].sum().sum()
+    gridavg_credits_total = df_optimized_credits.loc[:, ~is_smart_column].sum().sum()
+    print(f"Total credits (smart wins only): {smart_credits_total}")
+    print(f"Total credits (grid average wins only): {gridavg_credits_total}")
     print(f"Optimization benefit: {(df_optimized_credits.sum().sum() - df_allgridavg.sum().sum()):,.2f}")
     print("FSEs using smart:", smart_is_higher.sum(), "| grid:", (~smart_is_higher).sum())
     print(f"Total kWh Delivered: {df_combined.to_numpy().sum():,.2f}")
@@ -366,4 +372,3 @@ if __name__ == "__main__":
         eer_value=args.eer_value,
         energy_density=args.energy_density,
     )
-    
