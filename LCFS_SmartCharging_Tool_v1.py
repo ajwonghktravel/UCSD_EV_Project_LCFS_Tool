@@ -276,6 +276,7 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
     df_gridavg_sums = df_gridavg_sums.reset_index()
     df_gridavg_sums.columns = ['FSE ID', 'Grid Average kWh']
     df_gridavg_sums = df_gridavg_sums[df_gridavg_sums['Grid Average kWh'] != 0]
+    df_gridavg_sums = df_gridavg_sums.round(2)
     df_gridavg_sums.to_csv(output_dir / f"gridavg_sums_reporting{datetime.now().strftime('%Y%m%d')}.csv", index=True)
 
     # Or add the method as a row in the optimized credits dataframe
