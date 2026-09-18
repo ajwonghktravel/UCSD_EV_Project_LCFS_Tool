@@ -139,6 +139,11 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
     df_registered_fse = pd.read_csv(
         get_latest_file(data_folder, explicit_name="Registered FSE.csv", pattern="Registered FSE-*.csv"), dtype=str
     )
+    #Troubleshoot FSE issues with scientific notation in the EVSE_Serial_No column of the registered FSE file
+    #print(df_registered_fse["EVSE_Serial_No"].dtype)
+    #non_null = df_registered_fse["EVSE_Serial_No"].dropna()
+    #print(non_null.head(10).tolist())
+    #print(non_null.apply(type).value_counts())    
     carbon_intensity = pd.read_excel(os.path.join(data_folder, "ca_carbon_intensity_values.xlsx"))
 
     current_date = datetime.today().strftime("%Y-%m-%d")
@@ -191,11 +196,23 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
     # Transform Chargepoint data
     df_lcfs_chargepoint["System S/N"] = pd.merge(df_lcfs_chargepoint, df_evseid_sn, left_on="EVSE ID", right_on="EVSE ID", how="left")["System S/N"]
     df_lcfs_chargepoint['FSE ID'] = pd.merge(df_lcfs_chargepoint, df_registered_fse, left_on="System S/N", right_on="EVSE_Serial_No", how="left")["FSE_ID"]
-
     df_lcfs_chargepoint.columns = df_lcfs_chargepoint.columns.str.strip()  # Remove leading/trailing spaces from column names
     df_lcfs_chargepoint['Power Start Time'] = pd.to_datetime(df_lcfs_chargepoint["Power Start Time"], errors='coerce')
     df_lcfs_chargepoint['hour'] = df_lcfs_chargepoint['Power Start Time'].dt.hour
     df_lcfs_chargepoint['Energy Consumed (AC kWh)'] = pd.to_numeric(df_lcfs_chargepoint['Energy Consumed (AC kWh)'], errors='coerce')
+    #print(df_lcfs_chargepoint.head())
+    # how many EVSE IDs even matched to get a System S/N?
+    #print("System S/N NaN:", df_lcfs_chargepoint["System S/N"].isna().sum(), "/", len(df_lcfs_chargepoint))
+
+    # how many distinct EVSE ID values overlap between the two tables?
+    #print(set(df_lcfs_chargepoint["EVSE ID"].dropna().unique()[:10]))
+    #print(set(df_evseid_sn["EVSE ID"].dropna().unique()[:10]))
+
+    # same check for the second merge
+    #print(set(df_lcfs_chargepoint["System S/N"].dropna().unique()[:10]))
+    #print(set(df_registered_fse["EVSE_Serial_No"].dropna().unique()[:10]))
+    #print(df_lcfs_chargepoint[['hour', 'FSE ID', 'Energy Consumed (AC kWh)']].isna().sum())
+    #print(len(df_lcfs_chargepoint.dropna(subset=['hour', 'FSE ID'])))
     df_lcfs_chargepoint_reporting = df_lcfs_chargepoint.pivot_table(
         index="hour",
         columns="FSE ID",
@@ -203,7 +220,10 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
         aggfunc="sum",
         fill_value=0
     )
-
+    #print(df_lcfs_chargepoint_reporting.head())
+    df_chargepointvalidation = df_lcfs_chargepoint_reporting.copy()
+    df_chargepointvalidation['Total kWh'] = df_lcfs_chargepoint_reporting.sum(axis=1)
+    print(f"Chargepoint total kWh filed: {df_chargepointvalidation['Total kWh'].sum():,.2f}")
     # Transform Flipturn data
     df_lcfs_flipturn['IntervalStartDateTime'] = pd.to_datetime(df_lcfs_flipturn['IntervalStartDateTime'], errors='coerce')
     df_lcfs_flipturn['IntervalStartDateTime'] = df_lcfs_flipturn['IntervalStartDateTime'].dt.tz_convert('America/Los_Angeles')
@@ -217,7 +237,9 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
         aggfunc="sum",
         fill_value=0
     )
-
+    df_flipturnvalidation = df_lcfs_flipturn_reporting.copy()
+    df_flipturnvalidation['Total kWh'] = df_lcfs_flipturn_reporting.sum(axis=1)
+    print(f"Flipturn total kWh filed: {df_flipturnvalidation['Total kWh'].sum():,.2f}")
     df_combined = pd.concat([df_lcfs_pf_reporting, df_lcfs_chargepoint_reporting, df_lcfs_flipturn_reporting], axis=1).fillna(0)
     df_combined.to_csv(os.path.join(output_dir, "combined_lcfs_data.csv"), index=True)
 
@@ -344,3 +366,4 @@ if __name__ == "__main__":
         eer_value=args.eer_value,
         energy_density=args.energy_density,
     )
+    
