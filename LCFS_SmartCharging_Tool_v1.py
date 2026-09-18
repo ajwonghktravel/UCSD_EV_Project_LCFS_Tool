@@ -242,6 +242,7 @@ def lcfs_filing_manual(data_folder, quarter, year, ci_benchmark, grid_avg, eer_v
     print(f"Flipturn total kWh filed: {df_flipturnvalidation['Total kWh'].sum():,.2f}")
     df_combined = pd.concat([df_lcfs_pf_reporting, df_lcfs_chargepoint_reporting, df_lcfs_flipturn_reporting], axis=1).fillna(0)
     df_combined.to_csv(os.path.join(output_dir, "combined_lcfs_data.csv"), index=True)
+    df_combined = df_combined.round(2)
 
     ci_series = align_carbon_intensity(carbon_intensity, df_combined.index, quarter, year)
     print(f"ci_series length: {len(ci_series)}")
